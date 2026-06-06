@@ -285,6 +285,7 @@ body{display:flex;justify-content:center;align-items:center}
   <button id="gear-btn" class="gear-btn">⚙️</button>
   <div id="home-fox"></div>
   <div class="tagline">🦊 我是小深，你的AI小伙伴</div>
+  <div id="tts-debug" style="font-size:0.7em;color:#999;max-width:280px;text-align:center;padding:4px;background:#fff;border-radius:8px;display:none"></div>
   <div class="home-actions">
     <button id="call-btn" class="call-btn">📞 给我打电话</button>
     <button id="video-btn" class="video-btn">📹 视频通话</button>
@@ -302,6 +303,10 @@ body{display:flex;justify-content:center;align-items:center}
 
   // DOM
   initAvatar('home-fox');
+
+  // TTS diagnostic
+  runTTSDiag();
+
   $('gear-btn').addEventListener('click', openSettings);
   $('call-btn').addEventListener('click', () => { warmup(); enterCall(false); });
   $('video-btn').addEventListener('click', () => { warmup(); enterCall(true); });
@@ -407,7 +412,70 @@ function saveSettings() {
   closeSettings();
 }
 
-// ===== Toast =====
+// ===== TTS Diagnostic =====
+function runTTSDiag() {
+  const el = $('tts-debug');
+  if (!el) return;
+  el.style.display = 'block';
+  const lines = [];
+
+  if (!('speechSynthesis' in window)) {
+    lines.push('❌ speechSynthesis 不可用');
+    el.innerHTML = lines.join('<br>');
+    return;
+  }
+
+  let voices = window.speechSynthesis.getVoices();
+  lines.push(`🔊 speechSynthesis 可用`);
+
+  if (voices.length === 0) {
+    lines.push('⏳ 语音列表加载中...');
+    window.speechSynthesis.onvoiceschanged = () => {
+      voices = window.speechSynthesis.getVoices();
+      el.innerHTML = buildDiag(voices);
+      // Test speak
+      testSpeak();
+    };
+  } else {
+    // Try a test speak
+    testSpeak();
+  }
+
+  el.innerHTML = buildDiag(voices);
+}
+
+function buildDiag(voices) {
+  const lines = ['🔊 speechSynthesis 可用'];
+  const zh = voices.filter(v => v.lang.startsWith('zh'));
+  if (zh.length > 0) {
+    lines.push(`✅ 中文语音: ${zh.map(v => v.name).join(', ')}`);
+  } else {
+    lines.push('⚠️ 未找到中文语音');
+  }
+  lines.push(`📋 共 ${voices.length} 个语音`);
+  if (voices.length > 0) {
+    lines.push(`默认: ${voices[0].name} (${voices[0].lang})`);
+  }
+  return lines.join('<br>');
+}
+
+function testSpeak() {
+  if (!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance('你好');
+  u.lang = 'zh-CN';
+  u.volume = 1;
+  u.rate = 1;
+  u.onstart = () => {
+    const el = $('tts-debug');
+    if (el) el.innerHTML += '<br>🎤 测试发声成功！';
+  };
+  u.onerror = (e) => {
+    const el = $('tts-debug');
+    if (el) el.innerHTML += `<br>❌ 测试失败: ${e?.error || 'unknown'}`;
+  };
+  window.speechSynthesis.speak(u);
+}
 function showToast(msg) {
   const t = $('toast');
   if (!t) return;
