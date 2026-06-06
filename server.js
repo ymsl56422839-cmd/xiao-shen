@@ -1,6 +1,5 @@
-import { createServer } from 'node:https';
+import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
-import { readFileSync } from 'node:fs';
 import { join, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import os from 'node:os';
@@ -9,12 +8,6 @@ import handleChat from './api/chat.js';
 const PORT = process.env.PORT || 3000;
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const PUBLIC = join(__dirname, 'public');
-
-// Load SSL cert
-const sslOptions = {
-  key: readFileSync(join(__dirname, 'key.pem')),
-  cert: readFileSync(join(__dirname, 'cert.pem')),
-};
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -49,7 +42,8 @@ function getBody(req) {
   return new Promise(r => { let d = ''; req.on('data', c => d += c); req.on('end', () => { try { r(JSON.parse(d)); } catch { r({}); } }); });
 }
 
-const server = createServer(sslOptions, async (req, res) => {
+const server = createServer(async (req, res) => {
+  console.log(`${req.method} ${req.url}`);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.writeHead(204) && res.end();
@@ -73,6 +67,7 @@ const server = createServer(sslOptions, async (req, res) => {
 
 server.listen(PORT, () => {
   const ip = getIP();
-  console.log(`\n  🦊 小深 AI 小伙伴 已启动！`);
-  console.log(`  手机打开: http://${ip}:${PORT}\n`);
+  console.log(`\n  🦊 小深 AI 小伙伴 已启动！(HTTP)`);
+  console.log(`  本地: http://localhost:${PORT}`);
+  console.log(`  局域网: http://${ip}:${PORT}\n`);
 });
