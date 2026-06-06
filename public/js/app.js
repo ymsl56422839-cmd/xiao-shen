@@ -160,6 +160,9 @@ function setState(newState) {
 function updateUI() {
   const { mainScreen, voicePanel, cameraPanel, micBtn, micLabel, statusText } = dom;
 
+  // Guard: DOM not ready (loading screen)
+  if (!voicePanel || !cameraPanel) return;
+
   // Reset everything
   voicePanel.style.display = 'none';
   cameraPanel.style.display = 'none';
