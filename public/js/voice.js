@@ -2,137 +2,110 @@ let recognition = null;
 let isRecording = false;
 let lastTranscript = '';
 
-let onSpeechResult = null;
-let onSpeechStateChange = null;
+let onResult = null;
+let onState = null;
 
-export function initVoice({ onResult, onStateChange }) {
-  onSpeechResult = onResult;
-  onSpeechStateChange = onStateChange;
+export function initVoice({ onSpeechResult, onSpeechState }) {
+  onResult = onSpeechResult;
+  onState = onSpeechState;
 
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    console.warn('SpeechRecognition not supported');
-    onSpeechStateChange?.('unsupported');
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    onState?.('unsupported');
     return false;
   }
 
-  recognition = new SpeechRecognition();
+  recognition = new SR();
   recognition.lang = 'zh-CN';
   recognition.continuous = true;
   recognition.interimResults = true;
 
-  recognition.onresult = (event) => {
-    let interim = '';
-    lastTranscript = '';
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      const result = event.results[i];
-      if (result.isFinal) {
-        lastTranscript += result[0].transcript;
-      } else {
-        interim += result[0].transcript;
-      }
+  recognition.onresult = (e) => {
+    let final = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) final += e.results[i][0].transcript;
     }
-    onSpeechResult?.(lastTranscript, interim);
+    if (final) lastTranscript = final;
+    onResult?.(lastTranscript, '');
   };
 
-  recognition.onerror = (event) => {
-    console.error('Speech error:', event.error);
-    if (event.error === 'no-speech') {
-      // no-speech is common when user doesn't talk
-      // just stop quietly
+  recognition.onerror = (e) => {
+    if (e.error === 'not-allowed') {
+      onState?.('denied');
+    } else if (e.error !== 'no-speech') {
+      onState?.('error');
     }
     isRecording = false;
-    onSpeechStateChange?.('error');
   };
 
   recognition.onend = () => {
     const text = lastTranscript.trim();
     lastTranscript = '';
     isRecording = false;
-    if (text) {
-      onSpeechResult?.(text, '');
-    }
-    onSpeechStateChange?.('end');
+    if (text) onResult?.(text, '');
+    onState?.('end');
   };
 
   return true;
 }
 
-export function startRecording() {
-  if (!recognition) return false;
-  try {
+export async function toggleRecording() {
+  if (!recognition) return;
+
+  if (isRecording) {
+    recognition.stop();
+    onState?.('processing');
+  } else {
     lastTranscript = '';
-    recognition.start();
-    isRecording = true;
-    onSpeechStateChange?.('recording');
-    return true;
-  } catch {
-    // Already started, restart
-    try { recognition.abort(); } catch {}
     try {
-      recognition.start();
+      await recognition.start();
       isRecording = true;
-      onSpeechStateChange?.('recording');
-      return true;
+      onState?.('recording');
     } catch {
-      return false;
+      onState?.('error');
     }
   }
 }
 
-export function stopRecording() {
-  if (!recognition || !isRecording) return;
-  try {
-    recognition.stop();
-  } catch {}
-}
-
 export function speak(text, { onStart, onEnd }) {
-  if (!('speechSynthesis' in window)) return false;
+  if (!('speechSynthesis' in window)) {
+    onEnd?.();
+    return false;
+  }
 
   window.speechSynthesis.cancel();
-
-  // Load voices if needed
-  let voices = window.speechSynthesis.getVoices();
-  if (voices.length === 0) {
-    // voices might be async-loaded; try again after a tick
-    setTimeout(() => {
-      speak(text, { onStart, onEnd });
-    }, 100);
-    return true;
-  }
 
   const utter = new SpeechSynthesisUtterance(text);
   utter.lang = 'zh-CN';
   utter.rate = 1.0;
-  utter.pitch = 1.15;
+  utter.pitch = 1.1;
   utter.volume = 1;
 
-  const zhVoice = voices.find(v => v.lang.startsWith('zh-CN')) ||
-                   voices.find(v => v.lang.startsWith('zh-TW')) ||
-                   voices.find(v => v.lang.startsWith('zh'));
-  if (zhVoice) utter.voice = zhVoice;
+  let voices = window.speechSynthesis.getVoices();
+  if (voices.length === 0) {
+    setTimeout(() => {
+      voices = window.speechSynthesis.getVoices();
+      const v = voices.find(x => x.lang.startsWith('zh-CN')) || voices.find(x => x.lang.startsWith('zh'));
+      if (v) utter.voice = v;
+      window.speechSynthesis.speak(utter);
+    }, 200);
+  } else {
+    const v = voices.find(x => x.lang.startsWith('zh-CN')) || voices.find(x => x.lang.startsWith('zh'));
+    if (v) utter.voice = v;
+    window.speechSynthesis.speak(utter);
+  }
 
   utter.onstart = () => onStart?.();
   utter.onend = () => onEnd?.();
   utter.onerror = () => onEnd?.();
 
-  window.speechSynthesis.speak(utter);
-  onSpeechStateChange?.('speaking');
   return true;
 }
 
 export function stopSpeaking() {
-  if ('speechSynthesis' in window) {
-    window.speechSynthesis.cancel();
-    onSpeechStateChange?.('idle');
-  }
+  window.speechSynthesis?.cancel();
 }
 
 export function getIsRecording() {
   return isRecording;
-}
-
-export function isSpeaking() {
-  return 'speechSynthesis' in window && window.speechSynthesis.speaking;
 }

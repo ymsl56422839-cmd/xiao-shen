@@ -1,76 +1,45 @@
 let videoStream = null;
-let videoElement = null;
-let canvasElement = null;
-let captureInterval = null;
-let onFrameCaptured = null;
+let videoEl = null;
+let canvasEl = null;
+let onCapture = null;
 
-export function initCamera({ onFrame, onState }) {
-  onFrameCaptured = onFrame;
-  canvasElement = document.getElementById('camera-canvas');
-  videoElement = document.getElementById('camera-video');
+export function initCamera({ onFrame }) {
+  onCapture = onFrame;
 }
 
 export async function startCamera() {
   try {
     videoStream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: 'environment', // rear camera
-        width: { ideal: 640 },
-        height: { ideal: 480 }
-      },
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
       audio: false
     });
-
-    videoElement.srcObject = videoStream;
-    await videoElement.play();
-
-    // Start periodic capture
-    captureInterval = setInterval(captureFrame, 3000);
-
+    videoEl = document.getElementById('camera-video');
+    canvasEl = document.getElementById('camera-canvas');
+    if (videoEl) {
+      videoEl.srcObject = videoStream;
+      await videoEl.play();
+    }
     return true;
-  } catch (err) {
-    console.error('Camera error:', err);
-    return false;
-  }
+  } catch { return false; }
 }
 
 export function stopCamera() {
-  if (captureInterval) {
-    clearInterval(captureInterval);
-    captureInterval = null;
-  }
-  if (videoStream) {
-    videoStream.getTracks().forEach(track => track.stop());
-    videoStream = null;
-  }
-  if (videoElement) {
-    videoElement.srcObject = null;
-  }
+  videoStream?.getTracks().forEach(t => t.stop());
+  videoStream = null;
+  if (videoEl) videoEl.srcObject = null;
 }
 
 export function captureFrame() {
-  if (!videoElement || !canvasElement || !onFrameCaptured) return null;
-
-  const video = videoElement;
-  const canvas = canvasElement;
-  const ctx = canvas.getContext('2d');
-
-  canvas.width = video.videoWidth || 640;
-  canvas.height = video.videoHeight || 480;
-
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-  const mimeType = 'image/jpeg';
-  const quality = 0.6;
-  const dataUrl = canvas.toDataURL(mimeType, quality);
-
-  // Extract base64 without prefix
-  const base64 = dataUrl.split(',')[1];
-
-  onFrameCaptured(base64, mimeType);
-  return base64;
+  if (!videoEl || !canvasEl || !onCapture) return null;
+  const v = videoEl, c = canvasEl;
+  c.width = v.videoWidth || 640;
+  c.height = v.videoHeight || 480;
+  c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+  const b64 = c.toDataURL('image/jpeg', 0.8).split(',')[1];
+  onCapture(b64, 'image/jpeg');
+  return b64;
 }
 
 export function isActive() {
-  return videoStream !== null && videoStream.active;
+  return !!videoStream?.active;
 }
