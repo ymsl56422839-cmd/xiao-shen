@@ -1,56 +1,30 @@
-const STORAGE_KEY = 'xiaoshen';
+const KEY = 'xiaoshen_v2';
 
-const DEFAULTS = {
-  deepseekKey: '',
-  geminiKey: '',
-  parentPIN: '1234',
-  systemPrompt: '',
-  contentFilter: '',
-  conversationLog: []
-};
+const D = { deepseekKey: '', geminiKey: '', parentPIN: '1234', log: [] };
 
-export function getSettings() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { ...DEFAULTS };
-    return { ...DEFAULTS, ...JSON.parse(raw) };
-  } catch {
-    return { ...DEFAULTS };
-  }
+export function get() {
+  try { const r = localStorage.getItem(KEY); return r ? { ...D, ...JSON.parse(r) } : { ...D }; }
+  catch { return { ...D }; }
 }
 
-export function saveSettings(partial) {
-  const current = getSettings();
-  const updated = { ...current, ...partial };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+export function set(partial) {
+  const cur = get();
+  const updated = { ...cur, ...partial };
+  try { localStorage.setItem(KEY, JSON.stringify(updated)); } catch {}
   return updated;
 }
 
-export function addToLog(entry) {
-  const settings = getSettings();
-  settings.conversationLog.unshift({
-    time: new Date().toISOString(),
-    ...entry
-  });
-  if (settings.conversationLog.length > 200) {
-    settings.conversationLog = settings.conversationLog.slice(0, 200);
-  }
-  saveSettings({ conversationLog: settings.conversationLog });
+export function ready() {
+  return !!get().deepseekKey;
 }
 
-export function checkPIN(pin) {
-  return pin === getSettings().parentPIN;
+export function checkPin(pin) {
+  return pin === get().parentPIN;
 }
 
-export function isConfigured() {
-  const s = getSettings();
-  return !!s.deepseekKey;
-}
-
-export function getApiKeys() {
-  const s = getSettings();
-  return {
-    deepseekKey: s.deepseekKey,
-    geminiKey: s.geminiKey
-  };
+export function addLog(entry) {
+  const s = get();
+  s.log.unshift({ time: new Date().toISOString(), ...entry });
+  if (s.log.length > 200) s.log.length = 200;
+  set({ log: s.log });
 }

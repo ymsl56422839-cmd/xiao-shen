@@ -1,111 +1,102 @@
-let recognition = null;
-let isRecording = false;
-let lastTranscript = '';
-
+let rec = null;
+let listening = false;
+let transcript = '';
 let onResult = null;
 let onState = null;
+let silenceTimer = null;
 
-export function initVoice({ onSpeechResult, onSpeechState }) {
-  onResult = onSpeechResult;
-  onState = onSpeechState;
-
+export function init(cbs) {
+  onResult = cbs.onResult;
+  onState = cbs.onState;
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) {
-    onState?.('unsupported');
-    return false;
-  }
+  if (!SR) { onState?.('noapi'); return false; }
+  rec = new SR();
+  rec.lang = 'zh-CN';
+  rec.continuous = true;
+  rec.interimResults = true;
 
-  recognition = new SR();
-  recognition.lang = 'zh-CN';
-  recognition.continuous = true;
-  recognition.interimResults = true;
-
-  recognition.onresult = (e) => {
+  rec.onresult = (e) => {
     let final = '';
-    for (let i = e.resultIndex; i < e.results.length; i++) {
+    for (let i = e.resultIndex; i < e.results.length; i++)
       if (e.results[i].isFinal) final += e.results[i][0].transcript;
-    }
-    if (final) lastTranscript = final;
-    onResult?.(lastTranscript, '');
+    if (final) { transcript = final; resetSilence(); }
+    const interim = (e.results[e.results.length-1]?.[0]?.transcript) || '';
+    onResult?.(final || transcript, interim);
   };
 
-  recognition.onerror = (e) => {
-    if (e.error === 'not-allowed') {
-      onState?.('denied');
-    } else if (e.error !== 'no-speech') {
-      onState?.('error');
+  rec.onerror = (e) => {
+    if (e.error === 'not-allowed') onState?.('denied');
+    else if (e.error !== 'no-speech' && e.error !== 'aborted') {
+      console.warn('Speech err:', e.error);
+      restartListen();
     }
-    isRecording = false;
   };
 
-  recognition.onend = () => {
-    const text = lastTranscript.trim();
-    lastTranscript = '';
-    isRecording = false;
-    if (text) onResult?.(text, '');
-    onState?.('end');
+  rec.onend = () => {
+    if (!listening) return;
+    restartListen();
   };
 
   return true;
 }
 
-export async function toggleRecording() {
-  if (!recognition) return;
-
-  if (isRecording) {
-    recognition.stop();
-    onState?.('processing');
-  } else {
-    lastTranscript = '';
-    try {
-      await recognition.start();
-      isRecording = true;
-      onState?.('recording');
-    } catch {
-      onState?.('error');
+function resetSilence() {
+  clearTimeout(silenceTimer);
+  silenceTimer = setTimeout(() => {
+    if (transcript.trim()) {
+      const text = transcript.trim();
+      transcript = '';
+      onResult?.(text, '');
     }
+  }, 1500);
+}
+
+export function startListen() {
+  if (!rec) return;
+  listening = true;
+  transcript = '';
+  try { rec.start(); onState?.('listening'); } catch {
+    try { rec.abort(); } catch {}
+    setTimeout(() => { try { rec.start(); onState?.('listening'); } catch {} }, 200);
   }
 }
 
-export function speak(text, { onStart, onEnd }) {
-  if (!('speechSynthesis' in window)) {
-    onEnd?.();
-    return false;
-  }
+export function stopListen() {
+  listening = false;
+  clearTimeout(silenceTimer);
+  try { rec.abort(); } catch {}
+  onState?.('idle');
+}
 
+async function restartListen() {
+  if (!listening || !rec) return;
+  await sleep(300);
+  try { rec.start(); } catch {}
+}
+
+export function speak(text, startCb, endCb) {
+  if (!('speechSynthesis' in window)) { endCb?.(); return false; }
   window.speechSynthesis.cancel();
 
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.lang = 'zh-CN';
-  utter.rate = 1.0;
-  utter.pitch = 1.1;
-  utter.volume = 1;
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'zh-CN';
+  u.rate = 1.0;
+  u.pitch = 1.1;
 
-  let voices = window.speechSynthesis.getVoices();
-  if (voices.length === 0) {
-    setTimeout(() => {
-      voices = window.speechSynthesis.getVoices();
-      const v = voices.find(x => x.lang.startsWith('zh-CN')) || voices.find(x => x.lang.startsWith('zh'));
-      if (v) utter.voice = v;
-      window.speechSynthesis.speak(utter);
-    }, 200);
-  } else {
-    const v = voices.find(x => x.lang.startsWith('zh-CN')) || voices.find(x => x.lang.startsWith('zh'));
-    if (v) utter.voice = v;
-    window.speechSynthesis.speak(utter);
-  }
+  const voices = window.speechSynthesis.getVoices();
+  const v = voices.find(x => x.lang.startsWith('zh-CN')) || voices.find(x => x.lang.startsWith('zh'));
+  if (v) u.voice = v;
 
-  utter.onstart = () => onStart?.();
-  utter.onend = () => onEnd?.();
-  utter.onerror = () => onEnd?.();
+  u.onstart = () => startCb?.();
+  u.onend = () => endCb?.();
+  u.onerror = () => endCb?.();
 
+  window.speechSynthesis.speak(u);
   return true;
 }
 
-export function stopSpeaking() {
-  window.speechSynthesis?.cancel();
+export function stopSpeak() {
+  try { window.speechSynthesis?.cancel(); } catch {}
 }
 
-export function getIsRecording() {
-  return isRecording;
-}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
