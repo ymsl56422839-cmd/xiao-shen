@@ -1,14 +1,4 @@
 {
-  "name": "xiaoshen-ai-companion",
-  "version": "1.0.0",
   "private": true,
-  "type": "module",
-  "description": "AI companion for children - powered by DeepSeek",
-  "scripts": {
-    "dev": "vercel dev",
-    "deploy": "vercel --prod"
-  },
-  "devDependencies": {
-    "vercel": "^latest"
-  }
+  "type": "module"
 }
