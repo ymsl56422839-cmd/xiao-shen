@@ -4,28 +4,14 @@ let transcript = '';
 let onResult = null;
 let onState = null;
 let silenceTimer = null;
-let voicesReady = false;
-let allVoices = [];
-
-// Preload voices
-if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-  window.speechSynthesis.onvoiceschanged = () => {
-    allVoices = window.speechSynthesis.getVoices();
-    voicesReady = true;
-  };
-  allVoices = window.speechSynthesis.getVoices();
-  if (allVoices.length > 0) voicesReady = true;
-}
+let audioEl = null;
 
 export function warmup() {
-  if (!('speechSynthesis' in window)) return;
-  // Unlock TTS by speaking a silent utterance
-  const u = new SpeechSynthesisUtterance(' ');
-  u.volume = 0;
-  u.rate = 0.1;
-  try { window.speechSynthesis.speak(u); } catch {}
-  // Also try to load voices
-  window.speechSynthesis.getVoices();
+  // Create the shared audio element
+  if (!audioEl) {
+    audioEl = new Audio();
+    audioEl.preload = 'auto';
+  }
 }
 
 export function init(cbs) {
@@ -50,14 +36,12 @@ export function init(cbs) {
 
   rec.onerror = (e) => {
     if (e.error === 'not-allowed') onState?.('denied');
-    else if (e.error === 'no-speech') {}
-    else if (e.error === 'aborted') {}
-    else console.warn('Speech err:', e.error);
     if (listening) setTimeout(() => restart(), 500);
   };
 
   rec.onend = () => { if (listening) restart(); };
 
+  warmup();
   return true;
 }
 
@@ -88,46 +72,50 @@ export function stopListen() {
 }
 
 export function speak(text, startCb, endCb) {
-  if (!('speechSynthesis' in window)) { endCb?.(); return false; }
+  if (!audioEl) audioEl = new Audio();
 
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = 'zh-CN';
-  u.rate = 1.0;
-  u.pitch = 1.1;
-  u.volume = 1;
+  // Stop any ongoing playback
+  try { audioEl.pause(); } catch {}
 
-  // Try to pick Chinese voice, but don't block if none found
-  const voices = window.speechSynthesis.getVoices();
-  const zh = voices.find(x => x.lang.startsWith('zh-CN')) ||
-             voices.find(x => x.lang.startsWith('zh-TW')) ||
-             voices.find(x => x.lang.startsWith('zh'));
-  if (zh) u.voice = zh;
-
-  u.onstart = () => startCb?.();
-  u.onend = () => endCb?.();
-  u.onerror = (e) => {
-    console.warn('TTS err:', e?.error);
-    // Retry without specific voice
-    if (zh) {
-      const u2 = new SpeechSynthesisUtterance(text);
-      u2.lang = 'zh-CN';
-      u2.rate = 1.0;
-      u2.pitch = 1.1;
-      u2.volume = 1;
-      u2.onstart = () => startCb?.();
-      u2.onend = () => endCb?.();
-      u2.onerror = () => endCb?.();
-      window.speechSynthesis.speak(u2);
-    } else {
-      endCb?.();
+  // Split long text into chunks for Google TTS (max ~200 chars)
+  const maxChars = 180;
+  const chunks = [];
+  let remaining = text;
+  while (remaining.length > 0) {
+    if (remaining.length <= maxChars) {
+      chunks.push(remaining);
+      break;
     }
-  };
+    // Find a good break point
+    let cut = maxChars;
+    const breakers = ['。', '！', '？', '，', '.', '!', '?', ',', ' '];
+    for (const b of breakers) {
+      const idx = remaining.lastIndexOf(b, maxChars);
+      if (idx > maxChars * 0.5) { cut = idx + 1; break; }
+    }
+    chunks.push(remaining.slice(0, cut));
+    remaining = remaining.slice(cut);
+  }
 
-  window.speechSynthesis.speak(u);
+  let idx = 0;
+  startCb?.();
+
+  function playNext() {
+    if (idx >= chunks.length) { endCb?.(); return; }
+    const url = `/api/tts?text=${encodeURIComponent(chunks[idx])}`;
+    audioEl.src = url;
+    audioEl.onended = () => { idx++; playNext(); };
+    audioEl.onerror = () => { idx++; playNext(); };
+    audioEl.load();
+    audioEl.play().catch(() => { idx++; playNext(); });
+  }
+
+  playNext();
   return true;
 }
 
 export function stopSpeak() {
-  try { window.speechSynthesis?.cancel(); } catch {}
+  try {
+    if (audioEl) { audioEl.pause(); audioEl.src = ''; }
+  } catch {}
 }

@@ -48,6 +48,24 @@ const server = createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.writeHead(204) && res.end();
 
+  // TTS endpoint - Google Translate TTS proxy
+  if (req.url.startsWith('/api/tts')) {
+    const params = new URL(req.url, 'http://localhost').searchParams;
+    const text = params.get('text');
+    if (!text) { res.writeHead(400); res.end('missing text'); return; }
+    try {
+      const ttsRes = await fetch(
+        `https://translate.google.com/translate_tts?ie=UTF-8&tl=zh-CN&client=tw-ob&q=${encodeURIComponent(text)}`
+      );
+      if (!ttsRes.ok) throw new Error('TTS failed');
+      res.writeHead(200, { 'Content-Type': 'audio/mpeg' });
+      const buf = await ttsRes.arrayBuffer();
+      res.end(Buffer.from(buf));
+    } catch { res.writeHead(500); res.end('TTS error'); }
+    return;
+  }
+
+  // Chat endpoint
   if (req.url === '/api/chat' && req.method === 'POST') {
     const body = await getBody(req);
     try {

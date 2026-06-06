@@ -133,54 +133,6 @@ async function enterCall(useCam) {
 
   showCallScreen();
 
-  // iOS: unlock speechSynthesis immediately in new DOM while still in click chain
-  if ('speechSynthesis' in window) {
-    try { window.speechSynthesis.cancel(); } catch {}
-    const unlock = new SpeechSynthesisUtterance(' ');
-    unlock.volume = 0;
-    try { window.speechSynthesis.speak(unlock); } catch {}
-  }
-
-  if (camOn) {
-    const ok = await camStart();
-    if (!ok) { camOn = false; showToast('摄像头未授权'); }
-    else startVisionLoop();
-  }
-
-  // AI greets
-  sub = 'thinking'; updateUI();
-  const s = get();
-  const body = { messages: [{ role: 'user', content: '你好，我们开始聊天吧！' }], deepseekKey: s.deepseekKey };
-  if (s.geminiKey) body.geminiKey = s.geminiKey;
-  try {
-    const r = await fetch('/api/chat', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
-    });
-    const d = await r.json();
-    if (d.reply) {
-      msgs.push({ role: 'assistant', content: d.reply });
-      showBubble(d.reply);
-      doSpeak(d.reply);
-    } else {
-      sub = 'idle'; updateUI(); startListen();
-    }
-  } catch {
-    sub = 'idle'; updateUI(); startListen();
-  }
-}
-
-function hangup() {
-  stopListen();
-  stopSpeak();
-  stopVisionLoop();
-  camStop();
-  state = 'home';
-  camOn = false;
-  msgs = [];
-  showHomeScreen();
-}
-
-function toggleCam() {
   if (camOn) {
     stopVisionLoop();
     camStop();
@@ -417,64 +369,15 @@ function runTTSDiag() {
   const el = $('tts-debug');
   if (!el) return;
   el.style.display = 'block';
-  const lines = [];
+  el.innerHTML = '🔊 使用 Google TTS（音频播放）<br>';
 
-  if (!('speechSynthesis' in window)) {
-    lines.push('❌ speechSynthesis 不可用');
-    el.innerHTML = lines.join('<br>');
-    return;
-  }
-
-  let voices = window.speechSynthesis.getVoices();
-  lines.push(`🔊 speechSynthesis 可用`);
-
-  if (voices.length === 0) {
-    lines.push('⏳ 语音列表加载中...');
-    window.speechSynthesis.onvoiceschanged = () => {
-      voices = window.speechSynthesis.getVoices();
-      el.innerHTML = buildDiag(voices);
-      // Test speak
-      testSpeak();
-    };
-  } else {
-    // Try a test speak
-    testSpeak();
-  }
-
-  el.innerHTML = buildDiag(voices);
-}
-
-function buildDiag(voices) {
-  const lines = ['🔊 speechSynthesis 可用'];
-  const zh = voices.filter(v => v.lang.startsWith('zh'));
-  if (zh.length > 0) {
-    lines.push(`✅ 中文语音: ${zh.map(v => v.name).join(', ')}`);
-  } else {
-    lines.push('⚠️ 未找到中文语音');
-  }
-  lines.push(`📋 共 ${voices.length} 个语音`);
-  if (voices.length > 0) {
-    lines.push(`默认: ${voices[0].name} (${voices[0].lang})`);
-  }
-  return lines.join('<br>');
-}
-
-function testSpeak() {
-  if (!('speechSynthesis' in window)) return;
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance('你好');
-  u.lang = 'zh-CN';
-  u.volume = 1;
-  u.rate = 1;
-  u.onstart = () => {
-    const el = $('tts-debug');
-    if (el) el.innerHTML += '<br>🎤 测试发声成功！';
-  };
-  u.onerror = (e) => {
-    const el = $('tts-debug');
-    if (el) el.innerHTML += `<br>❌ 测试失败: ${e?.error || 'unknown'}`;
-  };
-  window.speechSynthesis.speak(u);
+  const a = new Audio();
+  a.src = `/api/tts?text=${encodeURIComponent('你好')}`;
+  a.volume = 0.5;
+  a.onplaying = () => { el.innerHTML += '✅ TTS 正常工作！'; };
+  a.onerror = () => { el.innerHTML += '❌ TTS 请求失败'; };
+  a.load();
+  a.play().catch(() => { el.innerHTML += '⚠️ 自动播放被阻止（点打电话按钮后正常）'; });
 }
 function showToast(msg) {
   const t = $('toast');
