@@ -36,7 +36,7 @@ function doSpeak(text) {
       setExpression('default');
       sub = 'idle';
       updateUI();
-      if (state === 'call') startListen();
+      // Don't auto-listen - user types via text input
     }
   );
   if (!ok) {
@@ -89,12 +89,16 @@ async function processUserText(text) {
       $('call-status').textContent = '🦊 小深在说...';
       doSpeak(d.reply);
     } else {
-      sub = 'idle'; updateUI(); startListen();
+      sub = 'idle'; updateUI();
     }
   } catch {
     showToast('网络出错了');
-    sub = 'idle'; updateUI(); startListen();
+    sub = 'idle'; updateUI();
   }
+  } catch {
+    sub = 'idle'; updateUI();
+  }
+}
 }
 
 // ===== Camera vision logic =====
@@ -284,7 +288,7 @@ function showCallScreen() {
     <button id="hangup" class="close-btn" style="background:rgba(255,0,0,.6);padding:8px 20px;border:none;color:#fff;border-radius:20px;font-size:.85em;font-family:inherit;cursor:pointer">🔴 挂断</button>
   </div>
   <div id="call-fox-wrap" class="call-fox-wrap${camOn?' oncam':''}"></div>
-  <div id="call-status" class="call-status">🦊 小深正在听...</div>
+  <div id="call-status" class="call-status">🦊 在下面打字跟我聊天</div>
   <div id="cam-hint" class="cam-hint"></div>
   <div id="bubble" class="bubble"><div class="arr"></div><span id="bubble-text"></span></div>
   <div class="text-row visible">
