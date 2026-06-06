@@ -19,114 +19,55 @@ const SYSTEM_PROMPT = `你是小深，一只聪明可爱的小狐狸，住在手
 
 记住：你是孩子的好朋友，不是老师，不是家长。`;
 
-export default async function handler(req, res) {
-  if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    res.status(204).end();
-    return;
-  }
-
-  if (req.method !== 'POST') {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.status(405).json({ error: 'Method not allowed' });
-    return;
-  }
-
-  // Always allow CORS from Vercel deployment
-  res.setHeader('Access-Control-Allow-Origin', '*');
-
-  const {
-    messages = [],
-    image,         // base64 image (without data URI prefix)
-    mimeType,      // image mime type
-    deepseekKey,   // API key from frontend
-    geminiKey,     // API key from frontend
-  } = req.body;
+export default async function handleChat(body) {
+  const { messages, image, mimeType, deepseekKey, geminiKey } = body;
 
   if (!deepseekKey) {
-    res.status(400).json({ error: 'Missing DeepSeek API key' });
-    return;
+    return { error: 'Missing DeepSeek API key' };
   }
 
-  try {
-    let userContent = '';
+  let userContent = '';
 
-    // 1. If image provided, use Gemini to describe it first
-    if (image && geminiKey) {
-      try {
-        const geminiResponse = await fetch(`${GEMINI_URL}?key=${geminiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{
-              parts: [
-                {
-                  text: `请用中文简要描述这张图片里有什么，用小朋友能听懂的话。只需描述你确切看到的东西，不要猜测或延伸。限制在50字以内。`
-                },
-                {
-                  inline_data: {
-                    mime_type: mimeType || 'image/jpeg',
-                    data: image
-                  }
-                }
-              ]
-            }]
-          })
-        });
+  if (image && geminiKey) {
+    try {
+      const geminiResponse = await fetch(`${GEMINI_URL}?key=${geminiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: '请用中文简要描述这张图片里有什么，用小朋友能听懂的话。只需描述你确切看到的东西，不要猜测或延伸。限制在50字以内。' },
+              { inline_data: { mime_type: mimeType || 'image/jpeg', data: image } }
+            ]
+          }]
+        })
+      });
 
-        if (geminiResponse.ok) {
-          const geminiData = await geminiResponse.json();
-          const description = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-          if (description) {
-            userContent = `[孩子给你看了画面：${description}]`;
-          }
-        }
-      } catch (geminiErr) {
-        console.error('Gemini error:', geminiErr);
+      if (geminiResponse.ok) {
+        const geminiData = await geminiResponse.json();
+        const desc = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        if (desc) userContent = `[孩子给你看了画面：${desc}]`;
       }
-    }
-
-    // 2. Build messages for DeepSeek
-    const chatMessages = [
-      { role: 'system', content: SYSTEM_PROMPT },
-      ...messages,
-    ];
-
-    if (userContent) {
-      chatMessages.push({ role: 'user', content: userContent });
-    }
-
-    // 3. Call DeepSeek
-    const deepseekResponse = await fetch(DEEPSEEK_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${deepseekKey}`,
-      },
-      body: JSON.stringify({
-        model: 'deepseek-v4-flash',
-        messages: chatMessages,
-        stream: false,
-        temperature: 0.8,
-        max_tokens: 300,
-      }),
-    });
-
-    if (!deepseekResponse.ok) {
-      const errText = await deepseekResponse.text();
-      console.error('DeepSeek error:', errText);
-      res.status(deepseekResponse.status).json({ error: 'DeepSeek API error' });
-      return;
-    }
-
-    const deepseekData = await deepseekResponse.json();
-    const reply = deepseekData.choices?.[0]?.message?.content || '';
-
-    res.status(200).json({ reply, imageDescription: userContent });
-
-  } catch (err) {
-    console.error('Server error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    } catch (e) { console.error('Gemini error:', e); }
   }
+
+  const chatMessages = [
+    { role: 'system', content: SYSTEM_PROMPT },
+    ...(messages || []),
+  ];
+  if (userContent) chatMessages.push({ role: 'user', content: userContent });
+
+  const res = await fetch(DEEPSEEK_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${deepseekKey}` },
+    body: JSON.stringify({ model: 'deepseek-v4-flash', messages: chatMessages, stream: false, temperature: 0.8, max_tokens: 300 }),
+  });
+
+  if (!res.ok) {
+    console.error('DeepSeek error:', await res.text());
+    return { error: 'DeepSeek API error' };
+  }
+
+  const data = await res.json();
+  return { reply: data.choices?.[0]?.message?.content || '', imageDescription: userContent };
 }
