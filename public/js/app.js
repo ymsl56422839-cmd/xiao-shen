@@ -133,6 +133,14 @@ async function enterCall(useCam) {
 
   showCallScreen();
 
+  // iOS: unlock speechSynthesis immediately in new DOM while still in click chain
+  if ('speechSynthesis' in window) {
+    try { window.speechSynthesis.cancel(); } catch {}
+    const unlock = new SpeechSynthesisUtterance(' ');
+    unlock.volume = 0;
+    try { window.speechSynthesis.speak(unlock); } catch {}
+  }
+
   if (camOn) {
     const ok = await camStart();
     if (!ok) { camOn = false; showToast('摄像头未授权'); }

@@ -4,20 +4,28 @@ let transcript = '';
 let onResult = null;
 let onState = null;
 let silenceTimer = null;
-let ttsReady = false;
+let voicesReady = false;
+let allVoices = [];
 
-// Warm up TTS on first user gesture
+// Preload voices
+if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+  window.speechSynthesis.onvoiceschanged = () => {
+    allVoices = window.speechSynthesis.getVoices();
+    voicesReady = true;
+  };
+  allVoices = window.speechSynthesis.getVoices();
+  if (allVoices.length > 0) voicesReady = true;
+}
+
 export function warmup() {
   if (!('speechSynthesis' in window)) return;
-  const u = new SpeechSynthesisUtterance('');
+  // Unlock TTS by speaking a silent utterance
+  const u = new SpeechSynthesisUtterance(' ');
   u.volume = 0;
-  u.rate = 1;
-  window.speechSynthesis.speak(u);
-  window.speechSynthesis.onvoiceschanged = () => {
-    window.speechSynthesis.getVoices();
-  };
+  u.rate = 0.1;
+  try { window.speechSynthesis.speak(u); } catch {}
+  // Also try to load voices
   window.speechSynthesis.getVoices();
-  ttsReady = true;
 }
 
 export function init(cbs) {
@@ -42,35 +50,22 @@ export function init(cbs) {
 
   rec.onerror = (e) => {
     if (e.error === 'not-allowed') onState?.('denied');
-    else if (e.error === 'no-speech') { /* user didn't speak yet, keep listening */ }
-    else if (e.error === 'aborted') { /* intentional stop */ }
-    else { console.warn('Speech err:', e.error); }
+    else if (e.error === 'no-speech') {}
+    else if (e.error === 'aborted') {}
+    else console.warn('Speech err:', e.error);
     if (listening) setTimeout(() => restart(), 500);
   };
 
-  rec.onend = () => {
-    if (listening) restart();
-  };
-
-  rec.onspeechend = () => {
-    // Speech ended naturally - force process any accumulated text
-    if (transcript.trim()) {
-      const text = transcript.trim();
-      transcript = '';
-      onResult?.(text, '');
-    }
-  };
+  rec.onend = () => { if (listening) restart(); };
 
   return true;
 }
 
-function resetSilence() {
-  clearTimeout(silenceTimer);
-}
+function resetSilence() { clearTimeout(silenceTimer); }
 
 function restart() {
   if (!listening || !rec) return;
-  try { rec.start(); } catch { 
+  try { rec.start(); } catch {
     setTimeout(() => { try { rec.start(); } catch {} }, 300);
   }
 }
@@ -96,31 +91,40 @@ export function speak(text, startCb, endCb) {
   if (!('speechSynthesis' in window)) { endCb?.(); return false; }
 
   window.speechSynthesis.cancel();
-
   const u = new SpeechSynthesisUtterance(text);
   u.lang = 'zh-CN';
-  u.rate = 1.05;
+  u.rate = 1.0;
   u.pitch = 1.1;
   u.volume = 1;
 
+  // Try to pick Chinese voice, but don't block if none found
   const voices = window.speechSynthesis.getVoices();
-  let voice = voices.find(x => x.lang.startsWith('zh-CN'));
-  if (!voice) voice = voices.find(x => x.lang.startsWith('zh-TW'));
-  if (!voice) voice = voices.find(x => x.lang.startsWith('zh'));
-  if (voice) u.voice = voice;
+  const zh = voices.find(x => x.lang.startsWith('zh-CN')) ||
+             voices.find(x => x.lang.startsWith('zh-TW')) ||
+             voices.find(x => x.lang.startsWith('zh'));
+  if (zh) u.voice = zh;
 
   u.onstart = () => startCb?.();
   u.onend = () => endCb?.();
-  u.onerror = () => endCb?.();
+  u.onerror = (e) => {
+    console.warn('TTS err:', e?.error);
+    // Retry without specific voice
+    if (zh) {
+      const u2 = new SpeechSynthesisUtterance(text);
+      u2.lang = 'zh-CN';
+      u2.rate = 1.0;
+      u2.pitch = 1.1;
+      u2.volume = 1;
+      u2.onstart = () => startCb?.();
+      u2.onend = () => endCb?.();
+      u2.onerror = () => endCb?.();
+      window.speechSynthesis.speak(u2);
+    } else {
+      endCb?.();
+    }
+  };
 
-  // On some platforms, speak() needs to be called after a small delay
-  // to work properly, especially on iOS
-  setTimeout(() => {
-    try {
-      window.speechSynthesis.speak(u);
-    } catch { endCb?.(); }
-  }, 100);
-
+  window.speechSynthesis.speak(u);
   return true;
 }
 
