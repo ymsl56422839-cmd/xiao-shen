@@ -1,5 +1,5 @@
 import { get, set, ready, checkPin, addLog } from './storage.js';
-import { init as initVoice, startListen, stopListen, speak, stopSpeak } from './voice.js';
+import { init as initVoice, startListen, stopListen, speak, stopSpeak, warmup } from './voice.js';
 import { init as initCam, start as camStart, stop as camStop, snap } from './camera.js';
 import { initAvatar, setExpression } from './avatar.js';
 
@@ -295,8 +295,8 @@ body{display:flex;justify-content:center;align-items:center}
   // DOM
   initAvatar('home-fox');
   $('gear-btn').addEventListener('click', openSettings);
-  $('call-btn').addEventListener('click', () => enterCall(false));
-  $('video-btn').addEventListener('click', () => enterCall(true));
+  $('call-btn').addEventListener('click', () => { warmup(); enterCall(false); });
+  $('video-btn').addEventListener('click', () => { warmup(); enterCall(true); });
   $('pin-ok').addEventListener('click', pinOk);
   $('pin-inp').addEventListener('keydown', e => { if (e.key === 'Enter') pinOk(); });
   $('s-back').addEventListener('click', closeSettings);
