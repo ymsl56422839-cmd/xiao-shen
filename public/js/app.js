@@ -287,8 +287,8 @@ function showCallScreen() {
   <div id="call-status" class="call-status">🦊 小深正在听...</div>
   <div id="cam-hint" class="cam-hint"></div>
   <div id="bubble" class="bubble"><div class="arr"></div><span id="bubble-text"></span></div>
-  <div id="call-text-row" class="text-row${txtVis?' visible':''}">
-    <input id="text-inp" placeholder="或者打字...">
+  <div class="text-row visible">
+    <input id="text-inp" placeholder="打字跟小深聊天...">
     <button id="text-send">发送</button>
   </div>
   <div class="hangup-row">
