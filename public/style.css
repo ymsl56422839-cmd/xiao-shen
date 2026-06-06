@@ -1,0 +1,692 @@
+/* ==========================================
+   AI 小伙伴 小深 — 儿童主题样式
+   Warm orange, big buttons, kid-friendly
+   ========================================== */
+
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --primary: #FF8C42;
+  --primary-dark: #E06B2A;
+  --primary-light: #FFB88C;
+  --bg: #FFF8F0;
+  --bg-card: #FFFFFF;
+  --text: #4A3728;
+  --text-light: #8B7355;
+  --accent: #FF6B6B;
+  --success: #4CAF50;
+  --radius: 18px;
+  --shadow: 0 4px 16px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+  font-size: 16px;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#app {
+  width: 100%;
+  max-width: 430px;
+  height: 100vh;
+  height: 100dvh;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ========== Setup Screen ========== */
+.setup-screen {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.setup-card {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 32px 24px;
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+  width: 100%;
+  max-width: 380px;
+}
+
+.setup-card .fox-avatar {
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 16px;
+}
+
+.setup-card h1 {
+  font-size: 1.4em;
+  margin-bottom: 8px;
+  color: var(--primary-dark);
+}
+
+.setup-card p {
+  font-size: 0.9em;
+  color: var(--text-light);
+  margin-bottom: 24px;
+}
+
+.setup-card form {
+  text-align: left;
+}
+
+.setup-card label {
+  display: block;
+  font-size: 0.85em;
+  font-weight: 600;
+  margin-bottom: 4px;
+  margin-top: 12px;
+  color: var(--text);
+}
+
+.setup-card label small {
+  font-weight: normal;
+  color: var(--text-light);
+}
+
+.setup-card input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 2px solid #F0E0D0;
+  border-radius: 12px;
+  font-size: 0.9em;
+  font-family: inherit;
+  background: var(--bg);
+  color: var(--text);
+  transition: border-color 0.2s;
+}
+
+.setup-card input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.setup-actions {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ========== Buttons ========== */
+.btn-primary {
+  width: 100%;
+  padding: 14px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 14px;
+  font-size: 1em;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.btn-primary:active {
+  background: var(--primary-dark);
+  transform: scale(0.97);
+}
+
+.btn-text {
+  background: none;
+  border: none;
+  color: var(--text-light);
+  font-size: 0.85em;
+  cursor: pointer;
+  padding: 8px;
+  text-decoration: underline;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  font-size: 1.4em;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 10px;
+  transition: background 0.2s;
+}
+
+.icon-btn:active {
+  background: rgba(0,0,0,0.05);
+}
+
+/* ========== Main Screen ========== */
+.main-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border-bottom: 1px solid #F0E0D0;
+  flex-shrink: 0;
+}
+
+.top-title {
+  font-size: 1.2em;
+  font-weight: 700;
+  color: var(--primary-dark);
+}
+
+/* ========== Fox Area ========== */
+.fox-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  position: relative;
+}
+
+.fox-avatar {
+  width: 160px;
+  height: 160px;
+  transition: transform 0.3s;
+}
+
+@keyframes fox-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(var(--float-distance, -6px)); }
+}
+
+/* Fox eye blink */
+#fox-left-eye, #fox-right-eye {
+  transform-origin: center;
+  transition: transform 0.15s ease;
+}
+
+/* ========== Status Bar ========== */
+.status-bar {
+  text-align: center;
+  padding: 8px 16px;
+  flex-shrink: 0;
+}
+
+#status-text {
+  font-size: 0.9em;
+  color: var(--text-light);
+  transition: color 0.3s;
+}
+
+/* ========== Response Bubble ========== */
+.response-bubble {
+  position: absolute;
+  top: 35%;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 85%;
+  background: white;
+  border-radius: 18px;
+  padding: 16px 20px;
+  box-shadow: var(--shadow-lg);
+  z-index: 10;
+  animation: bubbleIn 0.3s ease;
+}
+
+@keyframes bubbleIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.response-bubble .bubble-arrow {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 10px solid white;
+}
+
+#response-text {
+  font-size: 1.05em;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+/* ========== Voice Panel ========== */
+.voice-panel {
+  padding: 0 16px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.input-row {
+  display: flex;
+  width: 100%;
+  gap: 8px;
+}
+
+.text-input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 2px solid #F0E0D0;
+  border-radius: 25px;
+  font-size: 0.9em;
+  font-family: inherit;
+  background: white;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.text-input:focus {
+  border-color: var(--primary);
+}
+
+.send-btn {
+  padding: 12px 20px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 25px;
+  font-size: 0.9em;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.send-btn:active {
+  background: var(--primary-dark);
+}
+
+.mic-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.mic-btn {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 3px solid var(--primary);
+  background: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  box-shadow: var(--shadow);
+  -webkit-touch-callout: none;
+}
+
+.mic-btn:active,
+.mic-btn.recording {
+  background: var(--accent);
+  border-color: var(--accent);
+  transform: scale(1.1);
+  box-shadow: 0 0 0 12px rgba(255,107,107,0.2);
+}
+
+.mic-btn.thinking {
+  background: #FFD700;
+  border-color: #FFA000;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.mic-icon {
+  font-size: 2em;
+  pointer-events: none;
+}
+
+.mic-label {
+  font-size: 0.8em;
+  color: var(--text-light);
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+/* ========== Camera Mode Fox Overlay ========== */
+.main-screen.camera-mode .fox-main {
+  position: absolute;
+  top: 56px;
+  right: 12px;
+  width: 80px;
+  height: 80px;
+  flex: none;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.main-screen.camera-mode .fox-avatar {
+  width: 80px;
+  height: 80px;
+}
+
+.main-screen.camera-mode .status-bar {
+  position: absolute;
+  bottom: 80px;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  background: rgba(0,0,0,0.4);
+  border-radius: 20px;
+  margin: 0 16px;
+  padding: 6px 16px;
+}
+
+.main-screen.camera-mode #status-text {
+  color: white;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+.main-screen.camera-mode .response-bubble {
+  top: 20%;
+}
+.camera-panel {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: #000;
+}
+
+.camera-panel video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.camera-controls {
+  position: absolute;
+  bottom: 20px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding: 0 24px;
+}
+
+.camera-capture-btn {
+  padding: 14px 28px;
+  background: rgba(255,255,255,0.9);
+  color: var(--primary-dark);
+  border: none;
+  border-radius: 30px;
+  font-size: 1em;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.camera-capture-btn:active {
+  transform: scale(0.95);
+}
+
+.close-btn {
+  padding: 14px;
+  background: rgba(0,0,0,0.5);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  font-size: 1em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ========== Tab Bar ========== */
+.tab-bar {
+  display: flex;
+  background: var(--bg-card);
+  border-top: 1px solid #F0E0D0;
+  padding: 6px 16px;
+  padding-bottom: max(6px, env(safe-area-inset-bottom));
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  background: transparent;
+  border-radius: 12px;
+  font-size: 0.85em;
+  font-family: inherit;
+  color: var(--text-light);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transition: all 0.2s;
+}
+
+.tab-btn.active {
+  background: var(--primary);
+  color: white;
+}
+
+.tab-icon {
+  font-size: 1.4em;
+}
+
+/* ========== Settings ========== */
+.settings-screen {
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  overflow-y: auto;
+}
+
+.settings-panel {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border-bottom: 1px solid #F0E0D0;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.settings-header h2 {
+  font-size: 1.1em;
+}
+
+.settings-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 430px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.settings-body label {
+  font-size: 0.85em;
+  font-weight: 600;
+  margin-top: 12px;
+}
+
+.settings-body label small {
+  font-weight: normal;
+  color: var(--text-light);
+}
+
+.settings-body input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 2px solid #F0E0D0;
+  border-radius: 12px;
+  font-size: 0.9em;
+  font-family: inherit;
+  background: white;
+  color: var(--text);
+}
+
+.settings-body input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.settings-body .btn-primary {
+  margin-top: 20px;
+}
+
+.pin-box {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  gap: 12px;
+}
+
+.pin-box input {
+  width: 200px;
+  padding: 12px 16px;
+  border: 2px solid #F0E0D0;
+  border-radius: 12px;
+  font-size: 1.2em;
+  font-family: inherit;
+  text-align: center;
+  background: white;
+  letter-spacing: 4px;
+}
+
+.pin-box input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.pin-box .btn-primary {
+  width: 200px;
+}
+
+/* ========== Log ========== */
+.log-section {
+  margin-top: 24px;
+}
+
+.log-section h3 {
+  font-size: 1em;
+  margin-bottom: 12px;
+}
+
+.log-container {
+  max-height: 400px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.log-entry {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border-radius: 10px;
+  font-size: 0.82em;
+  line-height: 1.5;
+  border: 1px solid #F0E0D0;
+}
+
+.log-time {
+  color: var(--text-light);
+  font-size: 0.8em;
+  flex-shrink: 0;
+  min-width: 48px;
+}
+
+.log-role {
+  flex-shrink: 0;
+  font-weight: 600;
+}
+
+.log-content {
+  word-break: break-all;
+  flex: 1;
+}
+
+/* ========== Toast ========== */
+.toast {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(0,0,0,0.8);
+  color: white;
+  padding: 10px 24px;
+  border-radius: 25px;
+  font-size: 0.9em;
+  white-space: nowrap;
+  z-index: 1000;
+  opacity: 0;
+  transition: all 0.3s;
+  pointer-events: none;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ========== Responsive tweaks ========== */
+@media (max-width: 360px) {
+  :root { font-size: 14px; }
+  .fox-avatar { width: 130px; height: 130px; }
+  .mic-btn { width: 70px; height: 70px; }
+}
